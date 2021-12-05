@@ -40,8 +40,8 @@ public class Application extends JFrame {
 	Font DEBUG_BOX_F = new Font("Courier", Font.PLAIN, 14);
 	Font COORDS_F = new Font("Courier", Font.PLAIN, 8);
 	GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
-    GraphicsDevice device = env.getDefaultScreenDevice();
-    GraphicsConfiguration config = device.getDefaultConfiguration();
+	GraphicsDevice device = env.getDefaultScreenDevice();
+	GraphicsConfiguration config = device.getDefaultConfiguration();
 
 	// Application Semi-Constants
 	int CANW;
@@ -51,6 +51,7 @@ public class Application extends JFrame {
 	// Game Assets
 	Image grass;
 	Image sand;
+	WallObject wood_wall;
 
 	public JPanel panel = new JPanel() {
 		@Override
@@ -67,49 +68,71 @@ public class Application extends JFrame {
 
 			g2d.setRenderingHints(rh);
 
-			paint_(g);
+			float scaling = 1.0f;
+			int scaled_w = (int) (CANW * scaling);
+			int scaled_h = (int) (CANH * scaling);
+			BufferedImage canvas = new BufferedImage(scaled_w, scaled_h, BufferedImage.TYPE_INT_RGB);
+
+			paint_(canvas.getGraphics(), scaled_w, scaled_h);
+
+			g2d.drawImage(canvas, 0, 0, CANW, CANH, Color.WHITE, null);
 		}
 	};
 
 	float movement_speed = 0.75f;
 
-	int gridsize = 150;
+	int gridsize = 125;
 	float player_x = 0;
 	float player_y = 0;
 	float val;
 	float v_mult = 0.5f;
+	
 
-	void paint_(Graphics g) {
+	void paint_(Graphics g, int WIDTH, int HEIGHT) {
 		Graphics2D g2d = (Graphics2D) g;
 
 		g.setColor(Color.WHITE);
-		g.fillRect(0, 0, (int) CANW, (int) CANH);
+		g.fillRect(0, 0, (int) WIDTH, (int) HEIGHT);
 
 		// GRID LINES
 		int COL_N;
 		int ROW_N;
-		for (int x = 0; x < (COL_N = (CANW / gridsize) + 2); x += 1) {
-			int dx = (int)(x*gridsize);
-			for (int y = 2; y < (ROW_N = (int) (CANH / gridsize / v_mult * 2)); y += 1) {
+		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
+			for (int y = 1; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
 				// ---------
 				int offset = y % 2;
-				int offset_p = (int)(offset * gridsize / 2);
+				int offset_p = (int) (offset * gridsize / 2);
 				int dy = (int) (y * gridsize * v_mult / 2);
+				int dx = (int) (x * gridsize)-offset_p;
 
-				if((x+y)%2==0)
-					g.drawImage(grass, dx-offset_p, dy, new Color(0,0,0,0), null);
+				if (y % 2 == 0)
+					g2d.drawImage(grass, dx, dy, new Color(0, 0, 0, 0), null);
 				else
-					g.drawImage(sand, dx-offset_p, dy, new Color(0,0,0,0), null);
+					g2d.drawImage(sand, dx, dy, new Color(0, 0, 0, 0), null);
+
+				
 				// draw basic poly
 				g2d.setColor(new Color((int) (x * 255.0f / COL_N), 0, (int) (y * 255.0f / ROW_N)));
-				int[] x_pts = { dx + gridsize / 2 - offset_p, dx + gridsize - offset_p, dx + gridsize / 2 - offset_p,
-						dx - offset_p, dx + gridsize / 2 - offset_p };// top, right, bottom, left
+				int[] x_pts = { dx + gridsize / 2, dx + gridsize, dx + gridsize / 2,
+						dx, dx + gridsize / 2 };// top, right, bottom, left
 				int[] y_pts = { dy + 0, (int) (dy + gridsize * v_mult / 2), (int) (dy + gridsize * v_mult),
 						(int) (dy + gridsize * v_mult / 2), dy + 0 };
 				g.drawPolyline(x_pts, y_pts, x_pts.length);
+			}
+		}
 
-				
+		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
+			for (int y = 1; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
+				// ---------
+				int offset = y % 2;
+				int offset_p = (int) (offset * gridsize / 2);
+				int dy = (int) (y * gridsize * v_mult / 2);
+				int dx = (int) (x * gridsize)-offset_p;
 
+				g.drawImage(wood_wall.bleft, dx, dy, new Color(0, 0, 0, 0), null);
+				g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0), null);
+				g.drawImage(wood_wall.tleft, dx+gridsize/2, dy-gridsize/2, new Color(0, 0, 0, 0), null);
+				g.drawImage(wood_wall.tright, dx+gridsize/2, dy-gridsize/4, new Color(0, 0, 0, 0), null);
 				// draw marker
 				if (offset == 1)
 					g.setColor(Color.GREEN);
@@ -124,7 +147,7 @@ public class Application extends JFrame {
 			}
 		}
 
-		//g.drawImage(grass, 300, 300, new Color(0, 0, 0, 0), null);
+		// g.drawImage(grass, 300, 300, new Color(0, 0, 0, 0), null);
 
 		g.setColor(Color.BLUE);
 		g.fillRect((int) player_x, (int) player_y, 40, 40);
@@ -169,21 +192,21 @@ public class Application extends JFrame {
 	BufferedImage rotateImage(BufferedImage img, double angle) {
 		int w = img.getWidth();
 		int h = img.getHeight();
-	
+
 		AffineTransform tf = AffineTransform.getRotateInstance(angle, w / 2.0, h / 2.0);
-	
+
 		// get coordinates for all corners to determine real image size
 		Point2D[] ptSrc = new Point2D[4];
 		ptSrc[0] = new Point(0, 0);
 		ptSrc[1] = new Point(w, 0);
 		ptSrc[2] = new Point(w, h);
 		ptSrc[3] = new Point(0, h);
-	
+
 		Point2D[] ptTgt = new Point2D[4];
 		tf.transform(ptSrc, 0, ptTgt, 0, ptSrc.length);
-	
+
 		Rectangle rc = new Rectangle(0, 0, w, h);
-	
+
 		for (Point2D p : ptTgt) {
 			if (p.getX() < rc.x) {
 				rc.width += rc.x - p.getX();
@@ -198,23 +221,23 @@ public class Application extends JFrame {
 			if (p.getY() > rc.y + rc.height)
 				rc.height = (int) (p.getY() - rc.y);
 		}
-	
-		BufferedImage imgTgt = config.createCompatibleImage(rc.width, rc.height, Transparency.TRANSLUCENT);
-		//BufferedImage imgTgt = new BufferedImage(rc.width, rc.height, BufferedImage.TYPE_INT_ARGB);
+
+		// BufferedImage imgTgt = config.createCompatibleImage(rc.width, rc.height,
+		// Transparency.TRANSLUCENT);
+		BufferedImage imgTgt = new BufferedImage(rc.width, rc.height, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2d = imgTgt.createGraphics();
-	
+
 		// create a NEW rotation transformation around new center
 		tf = AffineTransform.getRotateInstance(angle, rc.getWidth() / 2, rc.getHeight() / 2);
 		g2d.setTransform(tf);
 		g2d.drawImage(img, -rc.x, -rc.y, null);
 		g2d.dispose();
-	
-		//drawOffset.x += rc.x;
-		//drawOffset.y += rc.y;
-	
+
+		// drawOffset.x += rc.x;
+		// drawOffset.y += rc.y;
+
 		return imgTgt;
 	}
-	
 
 	void initScreenRefresh() {
 		new Thread() {
@@ -237,7 +260,7 @@ public class Application extends JFrame {
 					panel.repaint();
 					lastrender = now;
 
-					while (now - lastrender < (1000000000 / 60)) {
+					while (now - lastrender < (1000000000 / FPS)) {
 						try {
 							Thread.sleep(1);
 							// Without sleeping there is a 100% CPU usage CRAZY!
@@ -259,17 +282,80 @@ public class Application extends JFrame {
 		return img;
 	}
 
-	Image processTile(BufferedImage img){
-		//int new_size = (int)((img.getWidth()+img.getHeight())/Math.sqrt(2));
-		//BufferedImage grass_1 = new BufferedImage(new_size, new_size, BufferedImage.TYPE_INT_ARGB);
-		BufferedImage img1 = rotateImage(img, Math.PI/4);
-		return img1.getScaledInstance(gridsize, (int)(gridsize*v_mult), 0);
+	BufferedImage shear45Image(BufferedImage img, int x, int y) {
+		int w = img.getWidth();
+		int h = img.getHeight();
+
+		AffineTransform tf = AffineTransform.getShearInstance(x, y);
+
+		// get coordinates for all corners to determine real image size
+		Point2D[] ptSrc = new Point2D[4];
+		ptSrc[0] = new Point(0, 0);
+		ptSrc[1] = new Point(w, 0);
+		ptSrc[2] = new Point(w, h);
+		ptSrc[3] = new Point(0, h);
+
+		Point2D[] ptTgt = new Point2D[4];
+		tf.transform(ptSrc, 0, ptTgt, 0, ptSrc.length);
+
+		Rectangle rc = new Rectangle(0, 0, w, h);
+
+		for (Point2D p : ptTgt) {
+			if (p.getX() < rc.x) {
+				rc.width += rc.x - p.getX();
+				rc.x = (int) p.getX();
+			}
+			if (p.getY() < rc.y) {
+				rc.height += rc.y - p.getY();
+				rc.y = (int) p.getY();
+			}
+			if (p.getX() > rc.x + rc.width)
+				rc.width = (int) (p.getX() - rc.x);
+			if (p.getY() > rc.y + rc.height)
+				rc.height = (int) (p.getY() - rc.y);
+		}
+
+		// BufferedImage imgTgt = config.createCompatibleImage(rc.width, rc.height,
+		// Transparency.TRANSLUCENT);
+		BufferedImage imgTgt = new BufferedImage(rc.width, rc.height, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d = imgTgt.createGraphics();
+
+		// create a NEW rotation transformation around new center
+		g2d.setTransform(tf);
+		g2d.drawImage(img, -rc.x, -rc.y, null);
+		g2d.dispose();
+
+		// drawOffset.x += rc.x;
+		// drawOffset.y += rc.y;
+
+		return imgTgt;
 	}
 
-	void ImportAssets(){
+	Image processTile(BufferedImage img) {
+		// int new_size = (int)((img.getWidth()+img.getHeight())/Math.sqrt(2));
+		// BufferedImage grass_1 = new BufferedImage(new_size, new_size,
+		// BufferedImage.TYPE_INT_ARGB);
+		BufferedImage img1 = rotateImage(img, Math.PI / 4);
+		return img1.getScaledInstance(gridsize, (int) (gridsize * v_mult), 0);
+	}
+
+	WallObject processWall(BufferedImage front, BufferedImage back) {
+		WallObject wobj = new WallObject();
+		BufferedImage img1 = shear45Image(front, 0, 1);
+		wobj.bleft = img1.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
+		BufferedImage img2 = shear45Image(front, 0, -1);
+		wobj.bright = img2.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
+		BufferedImage img3 = shear45Image(back, 0, -1);
+		wobj.tleft = img3.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
+		BufferedImage img4 = shear45Image(back, 0, 1);
+		wobj.tright = img4.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
+		return wobj;
+	}
+
+	void ImportAssets() {
 		grass = processTile(ImageFile("assets/grass.jpeg"));
 		sand = processTile(ImageFile("assets/sand.jpeg"));
-		
+		wood_wall = processWall(ImageFile("assets/stone.jpeg"), ImageFile("assets/wood.jpeg"));
 	}
 
 	public void InitializeApplication() {
@@ -288,7 +374,7 @@ public class Application extends JFrame {
 		ImportAssets();
 		// Event Timers (screen refresh/game time)
 		Timer t = new Timer();
-		initScreenRefresh();
+		// initScreenRefresh();
 		// game timer
 		t.schedule(new TimerTask() {
 
@@ -299,17 +385,24 @@ public class Application extends JFrame {
 
 		}, 0, TICK_RATE);
 
-		/*t.schedule(new TimerTask() {
+		t.schedule(new TimerTask() {
 
 			@Override
 			public void run() {
 				panel.repaint();
 			}
 
-		}, 0, (int) (1000 / FPS));*/
+		}, 0, (int) (1000 / FPS));
 
 		setTitle("Application");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLocationRelativeTo(null);
 	}
+}
+
+class WallObject {
+	public Image bleft;
+	public Image bright;
+	public Image tleft;
+	public Image tright;
 }
