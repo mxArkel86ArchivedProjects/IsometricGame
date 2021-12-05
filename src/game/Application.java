@@ -1,42 +1,32 @@
 package game;
 
-import game.Peripherals;
-
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
-import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
 import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
-import java.security.KeyPairGeneratorSpi;
 import java.awt.Rectangle;
 import java.awt.Point;
 import java.awt.geom.Point2D;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
-import java.awt.Transparency;
-import java.awt.geom.Rectangle2D;
 import java.awt.event.KeyEvent;
 
-import javax.swing.JPanel;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.awt.Font;
 
 public class Application extends JFrame {
 	// App Constants
-	static private long STARTTIME = System.currentTimeMillis();
+	//static private long STARTTIME = System.currentTimeMillis();
 	final float FPS = 60;
 	final int TICK_RATE = 10; // TICK RATE
 	Font DEBUG_BOX_F = new Font("Courier", Font.PLAIN, 14);
@@ -307,7 +297,6 @@ public class Application extends JFrame {
 			public void run() {
 				long lastlong = System.nanoTime();
 				float delta = 0;
-				long timer = System.currentTimeMillis();
 				final double physicstick = 1000000000 / 140;
 
 				while (true) {
@@ -404,8 +393,6 @@ public class Application extends JFrame {
 	}
 
 	WallObject processWall(BufferedImage front, BufferedImage back) {
-		//double a= Math.atan(1/v_mult);//TODO fix walls so they work with any angle. also replace vmax with a "viewing angle"
-		//double f = Math.sin(a);
 		double f = viewing_angle;
 		WallObject wobj = new WallObject();
 		BufferedImage img1 = shearImage(front, f);
