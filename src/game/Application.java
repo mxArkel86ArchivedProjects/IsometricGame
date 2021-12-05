@@ -26,6 +26,7 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Transparency;
+import java.awt.geom.Rectangle2D;
 
 import javax.swing.JPanel;
 import java.util.Timer;
@@ -129,21 +130,40 @@ public class Application extends JFrame {
 				int dy = (int) (y * gridsize * v_mult / 2);
 				int dx = (int) (x * gridsize)-offset_p;
 
+				if(true){
 				g.drawImage(wood_wall.bleft, dx, dy, new Color(0, 0, 0, 0), null);
-				g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0), null);
-				g.drawImage(wood_wall.tleft, dx+gridsize/2, dy-gridsize/2, new Color(0, 0, 0, 0), null);
-				g.drawImage(wood_wall.tright, dx+gridsize/2, dy-gridsize/4, new Color(0, 0, 0, 0), null);
-				// draw marker
+				//g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0), null);
+				//g.drawImage(wood_wall.tleft, dx+gridsize/2, dy-gridsize/2, new Color(0, 0, 0, 0), null);
+				//g.drawImage(wood_wall.tright, dx+gridsize/2, dy-gridsize/4, new Color(0, 0, 0, 0), null);
+				}
+				
+			}
+		}
+
+		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
+			for (int y = 1; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
+				// ---------
+				int offset = y % 2;
+				int offset_p = (int) (offset * gridsize / 2);
+				int dy = (int) (y * gridsize * v_mult / 2);
+				int dx = (int) (x * gridsize)-offset_p;
+
 				if (offset == 1)
 					g.setColor(Color.GREEN);
 				else
 					g.setColor(Color.RED);
-				g.fillRect(dx - 2 - offset_p, dy - 2, 4, 4);
+				g.fillRect(dx - 2, dy - 2, 4, 4);
 				g.setColor(Color.BLACK);
 
 				// draw coordinate
 				g.setFont(COORDS_F);
-				g.drawString(String.format("(%d %d)", x, y), dx, dy + g.getFontMetrics().getAscent());
+				String text = String.format("(%d %d)", x, y);
+				int w_ = g.getFontMetrics().getMaxAdvance()*text.length();
+				int h_ = g.getFontMetrics().getAscent();
+				g.setColor(Color.WHITE);
+				g.fillRect((int)(dx), (int)(dy), (int)(w_), (int)(h_));
+				g.setColor(Color.BLACK);
+				g.drawString(text, dx, dy + g.getFontMetrics().getAscent());
 			}
 		}
 
