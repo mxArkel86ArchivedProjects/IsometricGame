@@ -17,6 +17,12 @@ public class Peripherals implements KeyListener {
         return keyboard.get(code);
     }
 
+    public boolean keyPressed(int c){
+        if(keyboard.get(c)==null)
+            return false;
+        return keyboard.get(c);
+    }
+
     @Override
     public void keyTyped(KeyEvent e) {
         

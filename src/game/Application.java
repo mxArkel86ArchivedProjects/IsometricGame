@@ -27,6 +27,7 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Transparency;
 import java.awt.geom.Rectangle2D;
+import java.awt.event.KeyEvent;
 
 import javax.swing.JPanel;
 import java.util.Timer;
@@ -53,6 +54,7 @@ public class Application extends JFrame {
 	Image grass;
 	Image sand;
 	WallObject wood_wall;
+	BufferedImage debug_texture;
 
 	public JPanel panel = new JPanel() {
 		@Override
@@ -82,15 +84,18 @@ public class Application extends JFrame {
 
 	float movement_speed = 0.75f;
 
-	int gridsize = 80;
+	int gridsize = 200;
 	float player_x = 0;
 	float player_y = 0;
-	float val;
-	float v_mult = 0.7f;
+	float val = 0.0f;
+	double dynamic_params[]={0,40, 0};
+
+	double viewing_angle = Math.PI/6;
 	
 
 	void paint_(Graphics g, int WIDTH, int HEIGHT) {
 		Graphics2D g2d = (Graphics2D) g;
+		double v_mult = Math.sin(viewing_angle);
 
 		g.setColor(Color.WHITE);
 		g.fillRect(0, 0, (int) WIDTH, (int) HEIGHT);
@@ -106,11 +111,11 @@ public class Application extends JFrame {
 				int dy = (int) (y * gridsize * v_mult / 2);
 				int dx = (int) (x * gridsize)-offset_p;
 
-				if (y % 2 == 0)
+				/*if (y % 2 == 0)
 					g2d.drawImage(grass, dx, dy, new Color(0, 0, 0, 0), null);
 				else
 					g2d.drawImage(sand, dx, dy, new Color(0, 0, 0, 0), null);
-
+				*/
 				
 				// draw basic poly
 				g2d.setColor(new Color((int) (x * 255.0f / COL_N), 0, (int) (y * 255.0f / ROW_N)));
@@ -122,8 +127,10 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
-			for (int y = 1; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
+		BufferedImage img1 = shearImage(debug_texture, viewing_angle);
+		Image tex1 = img1.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
+		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1)&&x<4; x += 1) {
+			for (int y = 3; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1)&&y<4; y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
@@ -131,10 +138,11 @@ public class Application extends JFrame {
 				int dx = (int) (x * gridsize)-offset_p;
 
 				if(true){
-				g.drawImage(wood_wall.bleft, dx, dy, new Color(0, 0, 0, 0), null);
-				//g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0), null);
-				//g.drawImage(wood_wall.tleft, dx+gridsize/2, dy-gridsize/2, new Color(0, 0, 0, 0), null);
+					g.drawImage(tex1, dx, (int)(dy-dynamic_params[2]), new Color(0, 0, 0, 0), null);
+					//g.drawImage(wood_wall.tleft, dx, (int)(dy), new Color(0, 0, 0, 0), null);
 				//g.drawImage(wood_wall.tright, dx+gridsize/2, dy-gridsize/4, new Color(0, 0, 0, 0), null);
+				//g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0), null);
+				//g.drawImage(wood_wall.bleft, dx, dy, new Color(0, 0, 0, 0), null);
 				}
 				
 			}
@@ -173,18 +181,27 @@ public class Application extends JFrame {
 		g.fillRect((int) player_x, (int) player_y, 40, 40);
 
 		// DEBUGGING
+		String str = "[";
+		for(double val : dynamic_params){
+			str+=String.format("%.2f ", val);
+		}
+		str+="]";
+
 		g.setFont(DEBUG_BOX_F);
-		g.drawString(String.format("w=%d a=%d s=%d d=%d",
+		g.drawString(String.format("w=%d a=%d s=%d d=%d | vals=%s",
 				PERI.keyPressed('w') ? 1 : 0,
 				PERI.keyPressed('a') ? 1 : 0,
 				PERI.keyPressed('s') ? 1 : 0,
-				PERI.keyPressed('d') ? 1 : 0),
+				PERI.keyPressed('d') ? 1 : 0,
+				str),
 				0, g.getFontMetrics().getAscent());
 		g.drawString(String.format("player_x=%.4f player_y=%.4f", player_x, player_y),
 				0, 2 * g.getFontMetrics().getAscent());
 		g.dispose();
 	}
 
+	boolean pressing_switch = false;
+	int param_index = 0;
 	void tick(int tr) {
 
 		int intent_x = 0;
@@ -207,6 +224,32 @@ public class Application extends JFrame {
 			player_x += displacement_x;
 			player_y -= displacement_y;
 		}
+
+		double delta = 0.05;
+		if(!pressing_switch && PERI.keyPressed('l')){
+			pressing_switch = true;
+			param_index++;
+			if(param_index>=dynamic_params.length)
+				param_index=0;
+		}
+		if(!PERI.keyPressed('l')){
+			pressing_switch = false;
+		}
+
+		if(PERI.keyPressed('k')){
+			dynamic_params[param_index] = 0;
+		}
+
+		if(PERI.keyPressed(KeyEvent.VK_UP)){
+			dynamic_params[param_index]+=delta;
+		}
+		if(PERI.keyPressed(KeyEvent.VK_DOWN)){
+			dynamic_params[param_index]-=delta;
+		}
+
+		viewing_angle = Math.toRadians(dynamic_params[1]);
+		dynamic_params[0] = 1.4*Math.tan(viewing_angle+0.3)-0.4;
+		dynamic_params[2] = -210*Math.atan(viewing_angle)+100;
 	}
 
 	BufferedImage rotateImage(BufferedImage img, double angle) {
@@ -302,11 +345,12 @@ public class Application extends JFrame {
 		return img;
 	}
 
-	BufferedImage shear45Image(BufferedImage img, double x, double y) {
+	BufferedImage shearImage(BufferedImage img, double angle_v) {
 		int w = img.getWidth();
 		int h = img.getHeight();
 
-		AffineTransform tf = AffineTransform.getShearInstance(x, y);
+		AffineTransform tf = AffineTransform.getShearInstance(0, 2* Math.tan(angle_v));
+
 
 		// get coordinates for all corners to determine real image size
 		Point2D[] ptSrc = new Point2D[4];
@@ -341,7 +385,7 @@ public class Application extends JFrame {
 		Graphics2D g2d = imgTgt.createGraphics();
 
 		// create a NEW rotation transformation around new center
-		g2d.setTransform(tf);
+		g2d.transform(tf);
 		g2d.drawImage(img, -rc.x, -rc.y, null);
 		g2d.dispose();
 
@@ -356,20 +400,21 @@ public class Application extends JFrame {
 		// BufferedImage grass_1 = new BufferedImage(new_size, new_size,
 		// BufferedImage.TYPE_INT_ARGB);
 		BufferedImage img1 = rotateImage(img, Math.PI / 4);
-		return img1.getScaledInstance(gridsize, (int) (gridsize * v_mult), 0);
+		return img1.getScaledInstance(gridsize, (int) (gridsize * Math.sin(viewing_angle)), 0);
 	}
 
 	WallObject processWall(BufferedImage front, BufferedImage back) {
-		double a= Math.atan(1/v_mult);//TODO fix walls so they work with any angle. also replace vmax with a "viewing angle"
-		double f = Math.sin(a);
+		//double a= Math.atan(1/v_mult);//TODO fix walls so they work with any angle. also replace vmax with a "viewing angle"
+		//double f = Math.sin(a);
+		double f = viewing_angle;
 		WallObject wobj = new WallObject();
-		BufferedImage img1 = shear45Image(front, 0, f);
+		BufferedImage img1 = shearImage(front, f);
 		wobj.bleft = img1.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img2 = shear45Image(front, 0, -f);
+		BufferedImage img2 = shearImage(front, -f);
 		wobj.bright = img2.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img3 = shear45Image(back, 0, -f);
+		BufferedImage img3 = shearImage(back, -f);
 		wobj.tleft = img3.getScaledInstance((int)(gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img4 = shear45Image(back, 0, f);
+		BufferedImage img4 = shearImage(back, f);
 		wobj.tright = img4.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
 		return wobj;
 	}
@@ -378,6 +423,7 @@ public class Application extends JFrame {
 		grass = processTile(ImageFile("assets/grass.jpeg"));
 		sand = processTile(ImageFile("assets/sand.jpeg"));
 		wood_wall = processWall(ImageFile("assets/stone.jpeg"), ImageFile("assets/wood.jpeg"));
+		debug_texture = ImageFile("assets/wood.jpeg");
 	}
 
 	public void InitializeApplication() {
