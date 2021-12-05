@@ -82,11 +82,11 @@ public class Application extends JFrame {
 
 	float movement_speed = 0.75f;
 
-	int gridsize = 125;
+	int gridsize = 80;
 	float player_x = 0;
 	float player_y = 0;
 	float val;
-	float v_mult = 0.5f;
+	float v_mult = 0.7f;
 	
 
 	void paint_(Graphics g, int WIDTH, int HEIGHT) {
@@ -302,7 +302,7 @@ public class Application extends JFrame {
 		return img;
 	}
 
-	BufferedImage shear45Image(BufferedImage img, int x, int y) {
+	BufferedImage shear45Image(BufferedImage img, double x, double y) {
 		int w = img.getWidth();
 		int h = img.getHeight();
 
@@ -360,14 +360,16 @@ public class Application extends JFrame {
 	}
 
 	WallObject processWall(BufferedImage front, BufferedImage back) {
+		double a= Math.atan(1/v_mult);//TODO fix walls so they work with any angle. also replace vmax with a "viewing angle"
+		double f = Math.sin(a);
 		WallObject wobj = new WallObject();
-		BufferedImage img1 = shear45Image(front, 0, 1);
+		BufferedImage img1 = shear45Image(front, 0, f);
 		wobj.bleft = img1.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img2 = shear45Image(front, 0, -1);
+		BufferedImage img2 = shear45Image(front, 0, -f);
 		wobj.bright = img2.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img3 = shear45Image(back, 0, -1);
-		wobj.tleft = img3.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img4 = shear45Image(back, 0, 1);
+		BufferedImage img3 = shear45Image(back, 0, -f);
+		wobj.tleft = img3.getScaledInstance((int)(gridsize / 2), (int) (gridsize / 2), 0);
+		BufferedImage img4 = shear45Image(back, 0, f);
 		wobj.tright = img4.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
 		return wobj;
 	}
