@@ -94,7 +94,7 @@ public class Application extends JFrame {
 	float movement_base_speed = 0.04f;
 	float sprint_mult = 2f;
 
-	int gridsize = 180;
+	int gridsize = 80;
 	float player_x = 0;
 	float player_y = 0;
 
@@ -134,12 +134,14 @@ public class Application extends JFrame {
 				}
 
 				// draw basic poly
-				g.setColor(Color.RED);
+				if(false){
+					g.setColor(Color.RED);
 				int[] x_pts = { dx + gridsize / 2, dx + gridsize, dx + gridsize / 2,
 						dx, dx + gridsize / 2 };// top, right, bottom, left
 				int[] y_pts = { dy + 0, (int) (dy + gridsize * v_mult / 2), (int) (dy + gridsize * v_mult),
 						(int) (dy + gridsize * v_mult / 2), dy + 0 };
 				g.drawPolyline(x_pts, y_pts, x_pts.length);
+				}
 			}
 		}
 
@@ -193,7 +195,7 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
+		for (int x = 0; false && x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
 			for (int y = 0; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
 				// ---------
 				int offset = y % 2;
@@ -459,7 +461,7 @@ public class Application extends JFrame {
 	Flat processFlat(BufferedImage img) {
 		BufferedImage img1 = rotateImage(img, Math.PI / 4);
 		return new Flat(
-				toBufferedImage(img1.getScaledInstance(gridsize, (int) (gridsize * Math.sin(viewing_angle)), 0)));
+				toBufferedImage(img1.getScaledInstance(gridsize+1, (int) (gridsize * Math.sin(viewing_angle)+1), 0)));
 	}
 
 	Wall processWall(BufferedImage front, BufferedImage back) {
