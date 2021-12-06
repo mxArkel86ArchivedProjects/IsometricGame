@@ -77,9 +77,6 @@ public class Application extends JFrame {
 			paint_(canvas.getGraphics(), scaled_w, scaled_h);
 			g2d.drawImage(canvas, 0, 0, CANW, CANH, Color.WHITE, null);
 
-			g.setColor(Color.BLUE);
-			g.fillRect((int) player_x, (int) player_y, 40, 40);
-
 			// DEBUGGING
 			String str = "[";
 			for (double val : dynamic_params) {
@@ -100,7 +97,8 @@ public class Application extends JFrame {
 		}
 	};
 
-	float movement_speed = 0.75f;
+	float movement_base_speed = 0.04f;
+	float sprint_mult = 2f;
 
 	int gridsize = 150;
 	float player_x = 0;
@@ -124,12 +122,14 @@ public class Application extends JFrame {
 		// GRID LINES
 		int COL_N;
 		int ROW_N;
+		float tile_offset_x = player_x%1;
+		float tile_offset_y = player_y%1;
 		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
-			for (int y = 1; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
+			for (int y = 0; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) (y * gridsize * v_mult / 2);
-				int dx = (int) (x * gridsize) - offset_p;
+				int dy = (int) ((y-2*tile_offset_y) * gridsize * v_mult / 2);
+				int dx = (int) ((x-tile_offset_x) * gridsize + offset_p);
 
 				if (y % 2 == 0)
 					g2d.drawImage(grass, dx, dy, new Color(0, 0, 0, 0), null);
@@ -147,12 +147,12 @@ public class Application extends JFrame {
 		}
 
 		for (int x = 4; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1) && x < 5; x += 1) {
-			for (int y = 5; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1) && y < 6; y += 1) {
+			for (int y = 9; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1) && y < 10; y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) (y * gridsize * v_mult / 2);
-				int dx = (int) (x * gridsize) - offset_p;
+				int dy = (int) ((y-2*tile_offset_y) * gridsize * v_mult / 2);
+				int dx = (int) ((x-tile_offset_x) * gridsize + offset_p);
 
 				g.drawImage(wood_wall.tleft.img, dx - gridsize / 2, dy + wood_wall.tleft.offset-gridsize, new Color(0, 0, 0, 0), null);
 				g.drawImage(wood_wall.tright.img, dx, dy-wood_wall.tright.offset, new Color(0, 0, 0, 0), null);
@@ -167,8 +167,8 @@ public class Application extends JFrame {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) (y * gridsize * v_mult / 2);
-				int dx = (int) (x * gridsize) - offset_p;
+				int dy = (int) ((y-2*tile_offset_y) * gridsize * v_mult / 2);
+				int dx = (int) ((x-tile_offset_x) * gridsize) + offset_p;
 
 				if (offset == 1)
 					g.setColor(Color.GREEN);
@@ -180,12 +180,15 @@ public class Application extends JFrame {
 				// draw coordinate
 				g.setFont(COORDS_F);
 				String text = String.format("(%d %d)", x, y);
+				String text2 = String.format("(%d %d)", (int)x + (int)player_x, (int)y+2*(int)(player_y));
 				int w_ = g.getFontMetrics().getMaxAdvance() * text.length();
+				int w_2 = g.getFontMetrics().getMaxAdvance() * text.length();
 				int h_ = g.getFontMetrics().getAscent();
 				g.setColor(Color.WHITE);
-				g.fillRect((int) (dx), (int) (dy), (int) (w_), (int) (h_));
+				g.fillRect((int) (dx), (int) (dy), (int) (Math.max(w_, w_2)), (int) (h_*2));
 				g.setColor(Color.BLACK);
 				g.drawString(text, dx, dy + g.getFontMetrics().getAscent());
+				g.drawString(text2, dx, dy + g.getFontMetrics().getAscent()*2);
 			}
 		}
 
@@ -219,10 +222,10 @@ public class Application extends JFrame {
 			intent_y--;
 
 		if (intent_x != 0 || intent_y != 0) {
-
+			float sprint = PERI.keyPressed(KeyEvent.VK_SHIFT)?sprint_mult:1;
 			double intent_direction = Math.atan2(intent_y, intent_x);
-			double displacement_x = Math.cos(intent_direction) * movement_speed;
-			double displacement_y = Math.sin(intent_direction) * movement_speed;
+			double displacement_x = Math.cos(intent_direction) * movement_base_speed*sprint;
+			double displacement_y = Math.sin(intent_direction) * movement_base_speed*sprint;
 
 			player_x += displacement_x;
 			player_y -= displacement_y;
