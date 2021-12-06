@@ -3,8 +3,6 @@ package game;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.border.StrokeBorder;
-import javax.swing.text.AttributeSet.ColorAttribute;
 
 import java.awt.Color;
 import java.awt.Graphics;
@@ -15,6 +13,7 @@ import java.awt.image.BufferedImage;
 import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.awt.Rectangle;
 import java.awt.Point;
 import java.awt.geom.Point2D;
@@ -46,8 +45,14 @@ public class Application extends JFrame {
 	// Game Assets
 	Image grass;
 	Image sand;
+	BufferedImage grass_;
+	BufferedImage sand_;
+	Image glass;
+	BufferedImage glass_;
 	WallObject wood_wall;
-	BufferedImage debug_texture;
+	BufferedImage stone_;
+	BufferedImage wood_;
+	BufferedImage debug_texture_;
 
 	public JPanel panel = new JPanel() {
 		@Override
@@ -69,27 +74,8 @@ public class Application extends JFrame {
 			int scaled_h = (int) (CANH * scaling);
 			BufferedImage canvas = new BufferedImage(scaled_w, scaled_h, BufferedImage.TYPE_INT_RGB);
 
-			// if ((int) dynamic_params[1] == 1) {
-			// double angle = dynamic_params[0];
-			// g2d.setStroke(new BasicStroke(2));
-			// BufferedImage imgout = shearImage(debug_texture, 200, 200, angle,
-			// dynamic_params[2]);
-			// g2d.drawImage(imgout, 200, 200, new Color(0, 0, 0, 0), null);
-
-			// g2d.setColor(Color.RED);
-			// g2d.drawRect(200, 200, 200, 200);
-
-			// g2d.setStroke(new BasicStroke(4));
-			// g2d.setColor(Color.GREEN);
-			// g2d.drawLine(200, 400, 400, 400);
-			// g2d.setColor(Color.BLUE);
-			// g2d.drawLine(400, 400, 400, 400 - (int) (Math.tan(angle) * 200));
-			// g2d.setColor(Color.ORANGE);
-			// g2d.drawLine(200, 400, 400, 400 - (int) (Math.tan(angle) * 200));
-			// } else {
 			paint_(canvas.getGraphics(), scaled_w, scaled_h);
 			g2d.drawImage(canvas, 0, 0, CANW, CANH, Color.WHITE, null);
-			// }
 
 			g.setColor(Color.BLUE);
 			g.fillRect((int) player_x, (int) player_y, 40, 40);
@@ -124,6 +110,12 @@ public class Application extends JFrame {
 
 	void paint_(Graphics g, int WIDTH, int HEIGHT) {
 		Graphics2D g2d = (Graphics2D) g;
+		viewing_angle = Math.toRadians(dynamic_params[0]);
+
+		wood_wall = processWall(stone_, wood_);
+		grass = processTile(grass_);
+		sand = processTile(sand_);
+		glass = processTile(glass_);
 		double v_mult = Math.sin(viewing_angle);
 
 		g.setColor(Color.WHITE);
@@ -134,7 +126,6 @@ public class Application extends JFrame {
 		int ROW_N;
 		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
 			for (int y = 1; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
-				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
 				int dy = (int) (y * gridsize * v_mult / 2);
@@ -155,20 +146,19 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = 2; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1) && x < 3; x += 1) {
-			for (int y = 0; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1) && y < 1; y += 1) {
+		for (int x = 4; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1) && x < 5; x += 1) {
+			for (int y = 5; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1) && y < 6; y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
 				int dy = (int) (y * gridsize * v_mult / 2);
 				int dx = (int) (x * gridsize) - offset_p;
 
-				g.drawImage(wood_wall.tleft, dx - gridsize / 2, dy - gridsize / 4, new Color(0, 0, 0, 0), null);
-				// g.drawImage(wood_wall.tright, dx+gridsize/2, dy-gridsize/4, new Color(0, 0,
-				// 0, 0), null);
-				// g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0),null);
-				g.drawImage(wood_wall.bleft, dx - gridsize / 2, dy, new Color(0, 0, 0, 0), null);
-
+				g.drawImage(wood_wall.tleft.img, dx - gridsize / 2, dy + wood_wall.tleft.offset-gridsize, new Color(0, 0, 0, 0), null);
+				g.drawImage(wood_wall.tright.img, dx, dy-wood_wall.tright.offset, new Color(0, 0, 0, 0), null);
+				g.drawImage(wood_wall.bright.img, dx, dy+wood_wall.bleft.offset2-wood_wall.bleft.offset, new Color(0, 0, 0, 0),null);
+				g.drawImage(wood_wall.bleft.img, dx - gridsize / 2, dy+wood_wall.bleft.offset2-wood_wall.bleft.offset, new Color(0, 0, 0, 0), null);
+				g2d.drawImage(glass, dx-gridsize/2, dy-wood_wall.bleft.offset2-gridsize/2, new Color(0, 0, 0, 0), null);
 			}
 		}
 
@@ -208,12 +198,12 @@ public class Application extends JFrame {
 	double delta = 0.05;
 
 	void Square() {
-		int min_side = Math.min(debug_texture.getWidth(), debug_texture.getHeight());
-		BufferedImage img = debug_texture.getSubimage((int) ((debug_texture.getWidth() - min_side) / 2),
-				(int) ((debug_texture.getHeight() - min_side) / 2), min_side, min_side);
+		int min_side = Math.min(debug_texture_.getWidth(), debug_texture_.getHeight());
+		BufferedImage img = debug_texture_.getSubimage((int) ((debug_texture_.getWidth() - min_side) / 2),
+				(int) ((debug_texture_.getHeight() - min_side) / 2), min_side, min_side);
 	}
 
-	double dynamic_params[] = { 0 };
+	double dynamic_params[] = { Math.PI/6, 0 };
 
 	void tick(int tr) {
 
@@ -376,7 +366,7 @@ public class Application extends JFrame {
 		return bimage;
 	}
 
-	BufferedImage shearImage(BufferedImage img1, int width, int height, double angle, double scale) {
+	ShearReturn shearImage(BufferedImage img1, int width, int height, double angle, double scale) {
 		BufferedImage img = toBufferedImage(img1.getScaledInstance(width, height, 0));
 		// BufferedImage img = toBufferedImage(img2.getScaledInstance(100, 100, 0));
 		int w = img.getWidth();
@@ -400,6 +390,8 @@ public class Application extends JFrame {
 
 		Graphics2D g2d1 = imgout.createGraphics();
 
+		ShearReturn ret = new ShearReturn();
+
 		g2d1.transform(tf);
 		int dy = 0;
 		if (angle < 0)
@@ -409,13 +401,14 @@ public class Application extends JFrame {
 		}
 		g2d1.drawImage(img, 0, dy, null);
 		g2d1.dispose();
-		return imgout;
+
+		ret.img = imgout;
+		ret.offset = (int)(ptTgt[2].getY());
+		ret.offset2 = (int)(ptTgt[1].getY());
+		return ret;
 	}
 
 	Image processTile(BufferedImage img) {
-		// int new_size = (int)((img.getWidth()+img.getHeight())/Math.sqrt(2));
-		// BufferedImage grass_1 = new BufferedImage(new_size, new_size,
-		// BufferedImage.TYPE_INT_ARGB);
 		BufferedImage img1 = rotateImage(img, Math.PI / 4);
 		return img1.getScaledInstance(gridsize, (int) (gridsize * Math.sin(viewing_angle)), 0);
 	}
@@ -435,8 +428,14 @@ public class Application extends JFrame {
 	void ImportAssets() {
 		grass = processTile(ImageFile("assets/grass.jpeg"));
 		sand = processTile(ImageFile("assets/sand.jpeg"));
+		grass_ = ImageFile("assets/grass.jpeg");
+		sand_ = ImageFile("assets/sand.jpeg");
+		glass_ = ImageFile("assets/glass.png");
+		glass = processTile(ImageFile("assets/glass.png"));
+		stone_ = ImageFile("assets/stone.jpeg");
+		wood_ = ImageFile("assets/wood.jpeg");
 		wood_wall = processWall(ImageFile("assets/stone.jpeg"), ImageFile("assets/wood.jpeg"));
-		debug_texture = ImageFile("assets/debug_grad.jpeg");
+		debug_texture_ = ImageFile("assets/debug_grad.jpeg");
 	}
 
 	public void InitializeApplication() {
@@ -482,8 +481,13 @@ public class Application extends JFrame {
 }
 
 class WallObject {
-	public BufferedImage bleft;
-	public BufferedImage bright;
-	public BufferedImage tleft;
-	public BufferedImage tright;
+	public ShearReturn bleft;
+	public ShearReturn bright;
+	public ShearReturn tleft;
+	public ShearReturn tright;
+}
+class ShearReturn{
+	BufferedImage img;
+	int offset;
+	int offset2;
 }
