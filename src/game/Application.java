@@ -94,7 +94,7 @@ public class Application extends JFrame {
 	float movement_base_speed = 0.04f;
 	float sprint_mult = 2f;
 
-	int gridsize = 80;
+	int gridsize = 120;
 	float player_x = 0;
 	float player_y = 0;
 
@@ -104,6 +104,7 @@ public class Application extends JFrame {
 		Graphics2D g2d = (Graphics2D) g;
 
 		viewing_angle = dynamic_params[0];
+		gridsize = (int)dynamic_params[1];
 		double v_mult = Math.sin(viewing_angle);
 
 		g.setColor(Color.WHITE);
@@ -114,8 +115,8 @@ public class Application extends JFrame {
 		int ROW_N;
 		float tile_offset_x = player_x % 1;
 		float tile_offset_y = player_y % 1;
-		for (int x = -1; x <= (COL_N = 10); x += 1) {
-			for (int y = -1; y <= (ROW_N = 20); y += 1) {
+		for (int x = -1; x <= (COL_N = WIDTH/gridsize+2); x += 1) {
+			for (int y = -1; y <= (ROW_N = (int)(HEIGHT/gridsize/v_mult*2)+2); y += 1) {
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
 				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2);
@@ -145,8 +146,8 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = -1; x <= (COL_N = 10); x += 1) {
-			for (int y = -1; y <= (ROW_N = 20); y += 1) {
+		for (int x = -1; x <= (COL_N = WIDTH/gridsize+2); x += 1) {
+			for (int y = -1; y <= (ROW_N = (int)(HEIGHT/gridsize/v_mult*2)+2); y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
@@ -195,8 +196,8 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = 0; false && x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
-			for (int y = 0; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
+		for (int x = -1; false && x <= (COL_N = WIDTH/gridsize+2); x += 1) {
+			for (int y = -1; y <= (ROW_N = (int)(HEIGHT/gridsize/v_mult*2)+2); y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
@@ -245,7 +246,7 @@ public class Application extends JFrame {
 	// (int) ((debug_texture_.getHeight() - min_side) / 2), min_side, min_side);
 	// }
 
-	double dynamic_params[] = { Math.PI / 6, 0 };
+	double dynamic_params[] = { Math.PI / 6, 120};
 	final int LEVEL_W = 30;
 	final int LEVEL_H = 30;
 	Tile level[][] = new Tile[LEVEL_W][LEVEL_H];
@@ -461,7 +462,7 @@ public class Application extends JFrame {
 	Flat processFlat(BufferedImage img) {
 		BufferedImage img1 = rotateImage(img, Math.PI / 4);
 		return new Flat(
-				toBufferedImage(img1.getScaledInstance(gridsize+1, (int) (gridsize * Math.sin(viewing_angle)+1), 0)));
+				toBufferedImage(img1.getScaledInstance(gridsize+3, (int) (gridsize * Math.sin(viewing_angle)+3), 0)));
 	}
 
 	Wall processWall(BufferedImage front, BufferedImage back) {
