@@ -4,6 +4,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+import game.AssetManager;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -22,6 +23,10 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.KeyEvent;
 import java.awt.BasicStroke;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.awt.Font;
@@ -41,18 +46,7 @@ public class Application extends JFrame {
 	int CANW;
 	int CANH;
 	Peripherals PERI;
-
-	// Game Assets
-	Image grass;
-	Image sand;
-	BufferedImage grass_;
-	BufferedImage sand_;
-	Image glass;
-	BufferedImage glass_;
-	WallObject wood_wall;
-	BufferedImage stone_;
-	BufferedImage wood_;
-	BufferedImage debug_texture_;
+	AssetManager AMGR;
 
 	public JPanel panel = new JPanel() {
 		@Override
@@ -100,7 +94,7 @@ public class Application extends JFrame {
 	float movement_base_speed = 0.04f;
 	float sprint_mult = 2f;
 
-	int gridsize = 150;
+	int gridsize = 180;
 	float player_x = 0;
 	float player_y = 0;
 
@@ -108,12 +102,8 @@ public class Application extends JFrame {
 
 	void paint_(Graphics g, int WIDTH, int HEIGHT) {
 		Graphics2D g2d = (Graphics2D) g;
-		viewing_angle = Math.toRadians(dynamic_params[0]);
 
-		wood_wall = processWall(stone_, wood_);
-		grass = processTile(grass_);
-		sand = processTile(sand_);
-		glass = processTile(glass_);
+		viewing_angle = dynamic_params[0];
 		double v_mult = Math.sin(viewing_angle);
 
 		g.setColor(Color.WHITE);
@@ -122,22 +112,29 @@ public class Application extends JFrame {
 		// GRID LINES
 		int COL_N;
 		int ROW_N;
-		float tile_offset_x = player_x%1;
-		float tile_offset_y = player_y%1;
-		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
-			for (int y = 0; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
+		float tile_offset_x = player_x % 1;
+		float tile_offset_y = player_y % 1;
+		for (int x = -1; x <= (COL_N = 10); x += 1) {
+			for (int y = -1; y <= (ROW_N = 20); y += 1) {
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) ((y-2*tile_offset_y) * gridsize * v_mult / 2);
-				int dx = (int) ((x-tile_offset_x) * gridsize + offset_p);
+				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2);
+				int dx = (int) ((x - tile_offset_x) * gridsize + offset_p);
 
-				if (y % 2 == 0)
-					g2d.drawImage(grass, dx, dy, new Color(0, 0, 0, 0), null);
-				else
-					g2d.drawImage(sand, dx, dy, new Color(0, 0, 0, 0), null);
+				int nx = (int) x + (int) player_x;
+				int ny = (int) y + 2 * (int) (player_y);
+				// System.out.println(String.format("y=%d x=%d y=%d", y, nx, ny));
+				if (nx >= 0 && nx < LEVEL_W && ny >= 0 && ny < LEVEL_H) {
+					Tile tile = level[nx][ny];
+					if (tile != null && tile.floor != -1) {
+						g2d.drawImage(AMGR.getFlat(tile.floor).src, dx, dy, new Color(0, 0, 0, 0), null);
+					} else {
+						g2d.drawImage(AMGR.getFlat("grass").src, dx, dy, new Color(0, 0, 0, 0), null);
+					}
+				}
 
 				// draw basic poly
-				g2d.setColor(new Color((int) (x * 255.0f / COL_N), 0, (int) (y * 255.0f / ROW_N)));
+				g.setColor(Color.RED);
 				int[] x_pts = { dx + gridsize / 2, dx + gridsize, dx + gridsize / 2,
 						dx, dx + gridsize / 2 };// top, right, bottom, left
 				int[] y_pts = { dy + 0, (int) (dy + gridsize * v_mult / 2), (int) (dy + gridsize * v_mult),
@@ -146,49 +143,87 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = 4; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1) && x < 5; x += 1) {
-			for (int y = 9; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1) && y < 10; y += 1) {
+		for (int x = -1; x <= (COL_N = 10); x += 1) {
+			for (int y = -1; y <= (ROW_N = 20); y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) ((y-2*tile_offset_y) * gridsize * v_mult / 2);
-				int dx = (int) ((x-tile_offset_x) * gridsize + offset_p);
+				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2);
+				int dx = (int) ((x - tile_offset_x) * gridsize + offset_p);
 
-				g.drawImage(wood_wall.tleft.img, dx - gridsize / 2, dy + wood_wall.tleft.offset-gridsize, new Color(0, 0, 0, 0), null);
-				g.drawImage(wood_wall.tright.img, dx, dy-wood_wall.tright.offset, new Color(0, 0, 0, 0), null);
-				g.drawImage(wood_wall.bright.img, dx, dy+wood_wall.bleft.offset2-wood_wall.bleft.offset, new Color(0, 0, 0, 0),null);
-				g.drawImage(wood_wall.bleft.img, dx - gridsize / 2, dy+wood_wall.bleft.offset2-wood_wall.bleft.offset, new Color(0, 0, 0, 0), null);
-				g2d.drawImage(glass, dx-gridsize/2, dy-wood_wall.bleft.offset2-gridsize/2, new Color(0, 0, 0, 0), null);
+				int nx = (int) x + (int) player_x;
+				int ny = (int) y + 2 * (int) (player_y);
+				if (nx >= 0 && nx < LEVEL_W && ny >= 0 && ny < LEVEL_H) {
+					Tile tile = level[nx][ny];
+					if (tile != null) {
+						if (tile.wall_bottom_left != -1 ||
+								tile.wall_bottom_right != -1 ||
+								tile.wall_top_left != -1 ||
+								tile.wall_top_right != -1) {
+
+							if (tile.wall_top_left != -1) {
+								Wall w = AMGR.getWall(tile.wall_top_left);
+								g.drawImage(w.top_left.src, dx, dy - w.top_right.offset1+w.top_right.offset2,
+										new Color(0, 0, 0, 0), null);
+							}
+							if (tile.wall_top_right != -1) {
+								Wall w = AMGR.getWall(tile.wall_top_right);
+								g.drawImage(w.top_right.src, dx+gridsize/2, dy - w.top_right.offset1+w.top_right.offset2, new Color(0, 0, 0, 0),
+										null);
+							}
+							if (tile.wall_bottom_right != -1) {
+								Wall w = AMGR.getWall(tile.wall_bottom_right);
+								g.drawImage(w.bottom_right.src, dx+gridsize/2, dy - w.bottom_right.offset1,
+										new Color(0, 0, 0, 0), null);
+							}
+							if (tile.wall_bottom_left != -1) {
+								Wall w = AMGR.getWall(tile.wall_bottom_left);
+								g.drawImage(w.bottom_left.src, dx,
+										dy + w.bottom_left.offset1-gridsize, new Color(0, 0, 0, 0), null);
+							}
+						}
+
+						/*if (tile.ceiling != -1) {
+							Flat f = AMGR.getFlat(tile.floor);
+							g2d.drawImage(f.src, dx - gridsize / 2, dy - w.offset2 - gridsize / 2,
+									new Color(0, 0, 0, 0), null);
+						}*/
+					}
+				}
 			}
 		}
 
 		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1); x += 1) {
-			for (int y = 1; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
+			for (int y = 0; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1); y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) ((y-2*tile_offset_y) * gridsize * v_mult / 2);
-				int dx = (int) ((x-tile_offset_x) * gridsize) + offset_p;
+				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2);
+				int dx = (int) ((x - tile_offset_x) * gridsize) + offset_p;
+				int nx = (int) x + (int) player_x;
+				int ny = (int) y + 2 * (int) (player_y);
 
-				if (offset == 1)
-					g.setColor(Color.GREEN);
-				else
-					g.setColor(Color.RED);
-				g.fillRect(dx - 2, dy - 2, 4, 4);
-				g.setColor(Color.BLACK);
+				if (nx >= 0 && ny >= 0 && nx < LEVEL_W && ny < LEVEL_H) {
+					if (offset == 1)
+						g.setColor(Color.GREEN);
+					else
+						g.setColor(Color.RED);
+					g.fillRect(dx - 2, dy - 2, 4, 4);
+					g.setColor(Color.BLACK);
 
-				// draw coordinate
-				g.setFont(COORDS_F);
-				String text = String.format("(%d %d)", x, y);
-				String text2 = String.format("(%d %d)", (int)x + (int)player_x, (int)y+2*(int)(player_y));
-				int w_ = g.getFontMetrics().getMaxAdvance() * text.length();
-				int w_2 = g.getFontMetrics().getMaxAdvance() * text.length();
-				int h_ = g.getFontMetrics().getAscent();
-				g.setColor(Color.WHITE);
-				g.fillRect((int) (dx), (int) (dy), (int) (Math.max(w_, w_2)), (int) (h_*2));
-				g.setColor(Color.BLACK);
-				g.drawString(text, dx, dy + g.getFontMetrics().getAscent());
-				g.drawString(text2, dx, dy + g.getFontMetrics().getAscent()*2);
+					// draw coordinate
+					g.setFont(COORDS_F);
+					String text = String.format("(%d %d)", x, y);
+					String text2 = String.format("(%d %d)", nx, ny);
+					int w_ = g.getFontMetrics().getMaxAdvance() * text.length();
+					int w_2 = g.getFontMetrics().getMaxAdvance() * text.length();
+					int h_ = g.getFontMetrics().getAscent();
+					g.setColor(Color.WHITE);
+					g.fillRect((int) (dx), (int) (dy), (int) (Math.max(w_, w_2)), (int) (h_ * 2));
+					g.setColor(Color.BLACK);
+					g.drawString(text, dx, dy + g.getFontMetrics().getAscent());
+					g.drawString(text2, dx, dy + g.getFontMetrics().getAscent() * 2);
+				}
 			}
 		}
 
@@ -200,13 +235,18 @@ public class Application extends JFrame {
 	int param_index = 0;
 	double delta = 0.05;
 
-	void Square() {
-		int min_side = Math.min(debug_texture_.getWidth(), debug_texture_.getHeight());
-		BufferedImage img = debug_texture_.getSubimage((int) ((debug_texture_.getWidth() - min_side) / 2),
-				(int) ((debug_texture_.getHeight() - min_side) / 2), min_side, min_side);
-	}
+	// void Square() {
+	// int min_side = Math.min(debug_texture_.getWidth(),
+	// debug_texture_.getHeight());
+	// BufferedImage img = debug_texture_.getSubimage((int)
+	// ((debug_texture_.getWidth() - min_side) / 2),
+	// (int) ((debug_texture_.getHeight() - min_side) / 2), min_side, min_side);
+	// }
 
-	double dynamic_params[] = { Math.PI/6, 0 };
+	double dynamic_params[] = { Math.PI / 6, 0 };
+	final int LEVEL_W = 30;
+	final int LEVEL_H = 30;
+	Tile level[][] = new Tile[LEVEL_W][LEVEL_H];
 
 	void tick(int tr) {
 
@@ -222,10 +262,10 @@ public class Application extends JFrame {
 			intent_y--;
 
 		if (intent_x != 0 || intent_y != 0) {
-			float sprint = PERI.keyPressed(KeyEvent.VK_SHIFT)?sprint_mult:1;
+			float sprint = PERI.keyPressed(KeyEvent.VK_SHIFT) ? sprint_mult : 1;
 			double intent_direction = Math.atan2(intent_y, intent_x);
-			double displacement_x = Math.cos(intent_direction) * movement_base_speed*sprint;
-			double displacement_y = Math.sin(intent_direction) * movement_base_speed*sprint;
+			double displacement_x = Math.cos(intent_direction) * movement_base_speed * sprint;
+			double displacement_y = Math.sin(intent_direction) * movement_base_speed * sprint;
 
 			player_x += displacement_x;
 			player_y -= displacement_y;
@@ -243,6 +283,9 @@ public class Application extends JFrame {
 
 		if (PERI.keyPressed('k')) {
 			dynamic_params[param_index] = 0;
+		}
+		if(PERI.keyPressed('i')){
+			ImportAssets();
 		}
 
 		if (PERI.keyPressed(KeyEvent.VK_UP)) {
@@ -399,46 +442,54 @@ public class Application extends JFrame {
 		int dy = 0;
 		if (angle < 0)
 			dy = (int) (h - ptTgt[2].getY() + ptTgt[1].getY());
-		else if (angle >= 0) {
+		else if (angle >= 0 && angle<Math.PI/4) {
+			dy = (int) (h - ptTgt[2].getY());
+		}else if(angle>=Math.PI/4) {
 			dy = (int) (h - ptTgt[2].getY());
 		}
 		g2d1.drawImage(img, 0, dy, null);
 		g2d1.dispose();
 
-		ret.img = imgout;
-		ret.offset = (int)(ptTgt[2].getY());
-		ret.offset2 = (int)(ptTgt[1].getY());
+		ret.image = imgout;
+		ret.offset1 = (int) (ptTgt[2].getY());
+		ret.offset2 = (int) (ptTgt[1].getY());
 		return ret;
 	}
 
-	Image processTile(BufferedImage img) {
+	Flat processFlat(BufferedImage img) {
 		BufferedImage img1 = rotateImage(img, Math.PI / 4);
-		return img1.getScaledInstance(gridsize, (int) (gridsize * Math.sin(viewing_angle)), 0);
+		return new Flat(
+				toBufferedImage(img1.getScaledInstance(gridsize, (int) (gridsize * Math.sin(viewing_angle)), 0)));
 	}
 
-	WallObject processWall(BufferedImage front, BufferedImage back) {
+	Wall processWall(BufferedImage front, BufferedImage back) {
 		double f = viewing_angle;
 		double scaling = 1;
 		int size = gridsize / 2;
-		WallObject wobj = new WallObject();
-		wobj.bleft = shearImage(front, size, size, -f, scaling);
-		wobj.bright = shearImage(front, size, size, f, scaling);
-		wobj.tleft = shearImage(back, size, size, f, scaling);
-		wobj.tright = shearImage(back, size, size, -f, scaling);
-		return wobj;
+		ShearReturn bottomright = shearImage(front, size, size, f, scaling);
+		ShearReturn bottomleft = shearImage(front, size, size, -f, scaling);
+		ShearReturn topright = shearImage(back, size, size, -f, scaling);
+		ShearReturn topleft = shearImage(back, size, size, f, scaling);
+
+		Wall wall = new Wall();
+
+		wall.top_left = new Shear(topleft);
+		wall.top_right = new Shear(topright);
+		wall.bottom_left = new Shear(bottomleft);
+		wall.bottom_right = new Shear(bottomright);
+		return wall;
 	}
 
 	void ImportAssets() {
-		grass = processTile(ImageFile("assets/grass.jpeg"));
-		sand = processTile(ImageFile("assets/sand.jpeg"));
-		grass_ = ImageFile("assets/grass.jpeg");
-		sand_ = ImageFile("assets/sand.jpeg");
-		glass_ = ImageFile("assets/glass.png");
-		glass = processTile(ImageFile("assets/glass.png"));
-		stone_ = ImageFile("assets/stone.jpeg");
-		wood_ = ImageFile("assets/wood.jpeg");
-		wood_wall = processWall(ImageFile("assets/stone.jpeg"), ImageFile("assets/wood.jpeg"));
-		debug_texture_ = ImageFile("assets/debug_grad.jpeg");
+		AMGR.addAsset("debug_grad_floor", processFlat(ImageFile("assets/debug_grad.jpeg")));
+		AMGR.addAsset("debug_grad_wall",
+				processWall(ImageFile("assets/debug_grad.jpeg"), ImageFile("assets/debug_grad.jpeg")));
+		AMGR.addAsset("grass", processFlat(ImageFile("assets/grass.jpeg")));
+		AMGR.addAsset("sand", processFlat(ImageFile("assets/sand.jpeg")));
+		AMGR.addAsset("stone", processFlat(ImageFile("assets/stone.jpeg")));
+		AMGR.addAsset("wood", processFlat(ImageFile("assets/wood.jpeg")));
+		AMGR.addAsset("wood", processWall(ImageFile("assets/wood.jpeg"), ImageFile("assets/wood.jpeg")));
+		AMGR.addAsset("stone", processWall(ImageFile("assets/stone.jpeg"), ImageFile("assets/stone.jpeg")));
 	}
 
 	public void InitializeApplication() {
@@ -452,14 +503,25 @@ public class Application extends JFrame {
 		CANH = init_h;
 
 		PERI = new Peripherals();
+		AMGR = new AssetManager();
 		this.addKeyListener(PERI);
 
 		ImportAssets();
+
+		//level[10][10] = new Tile(AMGR, "sand");
+		level[3][3] = new Tile(AMGR, "sand", "sand", "wood", "wood", "stone", "stone");
+		/*Tile t = level[10][12];
+		System.out.println(String.format("Tile floor=%d ceiling=%d (%d,%d,%d,%d)", t.floor, t.ceiling, t.wall_top_left, t.wall_top_right, t.wall_bottom_right, t.wall_bottom_left));
+		for(Asset a : AMGR.getAssets()){
+			String name = a.name.substring(0,a.name.length()-2);
+			System.out.println(String.format("[%s](%d)(%d)", name, AMGR.wallID(name), AMGR.flatID(name)));
+		}*/
+		//this.dispose();
 		// Event Timers (screen refresh/game time)
-		Timer t = new Timer();
+		Timer timer = new Timer();
 		// initScreenRefresh();
 		// game timer
-		t.schedule(new TimerTask() {
+		timer.schedule(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -468,7 +530,7 @@ public class Application extends JFrame {
 
 		}, 0, TICK_RATE);
 
-		t.schedule(new TimerTask() {
+		timer.schedule(new TimerTask() {
 
 			@Override
 			public void run() {
@@ -483,14 +545,35 @@ public class Application extends JFrame {
 	}
 }
 
-class WallObject {
-	public ShearReturn bleft;
-	public ShearReturn bright;
-	public ShearReturn tleft;
-	public ShearReturn tright;
-}
-class ShearReturn{
-	BufferedImage img;
-	int offset;
+class ShearReturn {
+	BufferedImage image;
+	int offset1;
 	int offset2;
+}
+
+class Tile {
+	Tile(AssetManager amgr, String floor1, String ceil1, String wall_top_left1, String wall_top_right1, String wall_bottom_right1,
+			String wall_bottom_left1) {
+		floor = amgr.flatID(floor1);
+		ceiling = amgr.flatID(ceil1);
+		wall_top_left = amgr.wallID(wall_top_left1);
+		wall_top_right = amgr.wallID(wall_top_right1);
+		wall_bottom_right = amgr.wallID(wall_bottom_right1);
+		wall_bottom_left = amgr.wallID(wall_bottom_left1);
+	}
+
+	Tile(AssetManager amgr, String floor1) {
+		floor = amgr.flatID(floor1);
+	}
+
+	Tile() {
+
+	}
+
+	int wall_top_left;
+	int wall_top_right;
+	int wall_bottom_left;
+	int wall_bottom_right;
+	int ceiling;
+	int floor;
 }
