@@ -3,6 +3,9 @@ package game;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.border.StrokeBorder;
+import javax.swing.text.AttributeSet.ColorAttribute;
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -19,14 +22,14 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.KeyEvent;
-
+import java.awt.BasicStroke;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.awt.Font;
 
 public class Application extends JFrame {
 	// App Constants
-	//static private long STARTTIME = System.currentTimeMillis();
+	// static private long STARTTIME = System.currentTimeMillis();
 	final float FPS = 60;
 	final int TICK_RATE = 10; // TICK RATE
 	Font DEBUG_BOX_F = new Font("Courier", Font.PLAIN, 14);
@@ -66,9 +69,47 @@ public class Application extends JFrame {
 			int scaled_h = (int) (CANH * scaling);
 			BufferedImage canvas = new BufferedImage(scaled_w, scaled_h, BufferedImage.TYPE_INT_RGB);
 
-			paint_(canvas.getGraphics(), scaled_w, scaled_h);
+			if ((int) dynamic_params[1] == 1) {
+				double angle = dynamic_params[0];
+				g2d.setStroke(new BasicStroke(2));
+					BufferedImage imgout = shearImage(debug_texture, 200, 200, angle, 1.0f);
+					g2d.drawImage(imgout, 200, 200, new Color(0, 0, 0, 0), null);
+				
+					g2d.setColor(Color.RED);
+				g2d.drawRect(200, 200, 200, 200);
 
-			g2d.drawImage(canvas, 0, 0, CANW, CANH, Color.WHITE, null);
+				g2d.setStroke(new BasicStroke(4));
+				g2d.setColor(Color.GREEN);
+				g2d.drawLine(200, 400, 400, 400);
+				g2d.setColor(Color.BLUE);
+				g2d.drawLine(400, 400, 400, 400 - (int) (Math.tan(angle) * 200));
+				g2d.setColor(Color.ORANGE);
+				g2d.drawLine(200, 400, 400, 400 - (int) (Math.tan(angle) * 200));
+			} else {
+				paint_(canvas.getGraphics(), scaled_w, scaled_h);
+				g2d.drawImage(canvas, 0, 0, CANW, CANH, Color.WHITE, null);
+			}
+
+			g.setColor(Color.BLUE);
+			g.fillRect((int) player_x, (int) player_y, 40, 40);
+
+			// DEBUGGING
+			String str = "[";
+			for (double val : dynamic_params) {
+				str += String.format("%.2f ", val);
+			}
+			str += "]";
+
+			g.setFont(DEBUG_BOX_F);
+			g.drawString(String.format("w=%d a=%d s=%d d=%d | d=%.2f vals=%s",
+					PERI.keyPressed('w') ? 1 : 0,
+					PERI.keyPressed('a') ? 1 : 0,
+					PERI.keyPressed('s') ? 1 : 0,
+					PERI.keyPressed('d') ? 1 : 0,
+					delta, str),
+					0, g.getFontMetrics().getAscent());
+			g.drawString(String.format("player_x=%.4f player_y=%.4f", player_x, player_y),
+					0, 2 * g.getFontMetrics().getAscent());
 		}
 	};
 
@@ -78,13 +119,13 @@ public class Application extends JFrame {
 	float player_x = 0;
 	float player_y = 0;
 	float val = 0.0f;
-	double dynamic_params[]={0,40, 0};
+	double dynamic_params[] = { Math.PI / 6, 1.1, Math.PI / 4 };
 
-	double viewing_angle = Math.PI/6;
-	
+	double viewing_angle = Math.PI / 6;
 
 	void paint_(Graphics g, int WIDTH, int HEIGHT) {
 		Graphics2D g2d = (Graphics2D) g;
+		viewing_angle = dynamic_params[2];
 		double v_mult = Math.sin(viewing_angle);
 
 		g.setColor(Color.WHITE);
@@ -99,14 +140,15 @@ public class Application extends JFrame {
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
 				int dy = (int) (y * gridsize * v_mult / 2);
-				int dx = (int) (x * gridsize)-offset_p;
+				int dx = (int) (x * gridsize) - offset_p;
 
-				/*if (y % 2 == 0)
-					g2d.drawImage(grass, dx, dy, new Color(0, 0, 0, 0), null);
-				else
-					g2d.drawImage(sand, dx, dy, new Color(0, 0, 0, 0), null);
-				*/
-				
+				/*
+				 * if (y % 2 == 0)
+				 * g2d.drawImage(grass, dx, dy, new Color(0, 0, 0, 0), null);
+				 * else
+				 * g2d.drawImage(sand, dx, dy, new Color(0, 0, 0, 0), null);
+				 */
+
 				// draw basic poly
 				g2d.setColor(new Color((int) (x * 255.0f / COL_N), 0, (int) (y * 255.0f / ROW_N)));
 				int[] x_pts = { dx + gridsize / 2, dx + gridsize, dx + gridsize / 2,
@@ -117,24 +159,26 @@ public class Application extends JFrame {
 			}
 		}
 
-		BufferedImage img1 = shearImage(debug_texture, viewing_angle);
-		Image tex1 = img1.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1)&&x<4; x += 1) {
-			for (int y = 3; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1)&&y<4; y += 1) {
+		BufferedImage img1 = shearImage(debug_texture,  gridsize, gridsize,viewing_angle, 1);
+		for (int x = 0; x <= (COL_N = (int) Math.ceil(WIDTH / gridsize) + 1) && x < 4; x += 1) {
+			for (int y = 3; y <= (ROW_N = (int) (Math.ceil(HEIGHT / gridsize / v_mult * 2)) + 1) && y < 4; y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
 				int dy = (int) (y * gridsize * v_mult / 2);
-				int dx = (int) (x * gridsize)-offset_p;
+				int dx = (int) (x * gridsize) - offset_p;
 
-				if(true){
-					g.drawImage(tex1, dx, (int)(dy-dynamic_params[2]), new Color(0, 0, 0, 0), null);
-					//g.drawImage(wood_wall.tleft, dx, (int)(dy), new Color(0, 0, 0, 0), null);
-				//g.drawImage(wood_wall.tright, dx+gridsize/2, dy-gridsize/4, new Color(0, 0, 0, 0), null);
-				//g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0), null);
-				//g.drawImage(wood_wall.bleft, dx, dy, new Color(0, 0, 0, 0), null);
+				if (true) {
+					g.drawImage(img1, dx, dy, new Color(0, 0, 0, 0), null);
+					// null);
+					// g.drawImage(wood_wall.tleft, dx, (int)(dy), new Color(0, 0, 0, 0), null);
+					// g.drawImage(wood_wall.tright, dx+gridsize/2, dy-gridsize/4, new Color(0, 0,
+					// 0, 0), null);
+					// g.drawImage(wood_wall.bright, dx+gridsize/2, dy, new Color(0, 0, 0, 0),
+					// null);
+					// g.drawImage(wood_wall.bleft, dx, dy, new Color(0, 0, 0, 0), null);
 				}
-				
+
 			}
 		}
 
@@ -144,7 +188,7 @@ public class Application extends JFrame {
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
 				int dy = (int) (y * gridsize * v_mult / 2);
-				int dx = (int) (x * gridsize)-offset_p;
+				int dx = (int) (x * gridsize) - offset_p;
 
 				if (offset == 1)
 					g.setColor(Color.GREEN);
@@ -156,42 +200,29 @@ public class Application extends JFrame {
 				// draw coordinate
 				g.setFont(COORDS_F);
 				String text = String.format("(%d %d)", x, y);
-				int w_ = g.getFontMetrics().getMaxAdvance()*text.length();
+				int w_ = g.getFontMetrics().getMaxAdvance() * text.length();
 				int h_ = g.getFontMetrics().getAscent();
 				g.setColor(Color.WHITE);
-				g.fillRect((int)(dx), (int)(dy), (int)(w_), (int)(h_));
+				g.fillRect((int) (dx), (int) (dy), (int) (w_), (int) (h_));
 				g.setColor(Color.BLACK);
 				g.drawString(text, dx, dy + g.getFontMetrics().getAscent());
 			}
 		}
 
 		// g.drawImage(grass, 300, 300, new Color(0, 0, 0, 0), null);
-
-		g.setColor(Color.BLUE);
-		g.fillRect((int) player_x, (int) player_y, 40, 40);
-
-		// DEBUGGING
-		String str = "[";
-		for(double val : dynamic_params){
-			str+=String.format("%.2f ", val);
-		}
-		str+="]";
-
-		g.setFont(DEBUG_BOX_F);
-		g.drawString(String.format("w=%d a=%d s=%d d=%d | vals=%s",
-				PERI.keyPressed('w') ? 1 : 0,
-				PERI.keyPressed('a') ? 1 : 0,
-				PERI.keyPressed('s') ? 1 : 0,
-				PERI.keyPressed('d') ? 1 : 0,
-				str),
-				0, g.getFontMetrics().getAscent());
-		g.drawString(String.format("player_x=%.4f player_y=%.4f", player_x, player_y),
-				0, 2 * g.getFontMetrics().getAscent());
 		g.dispose();
 	}
 
 	boolean pressing_switch = false;
 	int param_index = 0;
+	double delta = 0.05;
+
+	void Square() {
+		int min_side = Math.min(debug_texture.getWidth(), debug_texture.getHeight());
+		BufferedImage img = debug_texture.getSubimage((int) ((debug_texture.getWidth() - min_side) / 2),
+				(int) ((debug_texture.getHeight() - min_side) / 2), min_side, min_side);
+	}
+
 	void tick(int tr) {
 
 		int intent_x = 0;
@@ -215,31 +246,33 @@ public class Application extends JFrame {
 			player_y -= displacement_y;
 		}
 
-		double delta = 0.05;
-		if(!pressing_switch && PERI.keyPressed('l')){
+		if (!pressing_switch && PERI.keyPressed('l')) {
 			pressing_switch = true;
 			param_index++;
-			if(param_index>=dynamic_params.length)
-				param_index=0;
+			if (param_index >= dynamic_params.length)
+				param_index = 0;
 		}
-		if(!PERI.keyPressed('l')){
+		if (!PERI.keyPressed('l')) {
 			pressing_switch = false;
 		}
 
-		if(PERI.keyPressed('k')){
+		if (PERI.keyPressed('k')) {
 			dynamic_params[param_index] = 0;
 		}
 
-		if(PERI.keyPressed(KeyEvent.VK_UP)){
-			dynamic_params[param_index]+=delta;
+		if (PERI.keyPressed(KeyEvent.VK_UP)) {
+			dynamic_params[param_index] += delta;
 		}
-		if(PERI.keyPressed(KeyEvent.VK_DOWN)){
-			dynamic_params[param_index]-=delta;
+		if (PERI.keyPressed(KeyEvent.VK_DOWN)) {
+			dynamic_params[param_index] -= delta;
 		}
-
-		viewing_angle = Math.toRadians(dynamic_params[1]);
-		dynamic_params[0] = 1.4*Math.tan(viewing_angle+0.3)-0.4;
-		dynamic_params[2] = -210*Math.atan(viewing_angle)+100;
+		if (PERI.keyPressed(KeyEvent.VK_RIGHT)) {
+			delta += 0.01;
+		}
+		if (PERI.keyPressed(KeyEvent.VK_LEFT)) {
+			if (delta - 0.01 >= 0)
+				delta -= 0.01;
+		}
 	}
 
 	BufferedImage rotateImage(BufferedImage img, double angle) {
@@ -334,54 +367,171 @@ public class Application extends JFrame {
 		return img;
 	}
 
-	BufferedImage shearImage(BufferedImage img, double angle_v) {
+	public static BufferedImage toBufferedImage(Image img) {
+		if (img instanceof BufferedImage) {
+			return (BufferedImage) img;
+		}
+
+		// Create a buffered image with transparency
+		BufferedImage bimage = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+
+		// Draw the image on to the buffered image
+		Graphics2D bGr = bimage.createGraphics();
+		bGr.drawImage(img, 0, 0, null);
+		bGr.dispose();
+
+		// Return the buffered image
+		return bimage;
+	}
+
+	BufferedImage shearImage45(BufferedImage img1, double scale_v) {
+		int min_side = Math.min(img1.getWidth(), img1.getHeight());
+		BufferedImage img2 = img1.getSubimage((int) ((img1.getWidth() - min_side) / 2),
+				(int) ((img1.getHeight() - min_side) / 2), min_side, min_side);
+		BufferedImage img = toBufferedImage(img2.getScaledInstance(100, 100, 0));
 		int w = img.getWidth();
 		int h = img.getHeight();
 
-		AffineTransform tf = AffineTransform.getShearInstance(0, 2* Math.tan(angle_v));
-
+		AffineTransform tf = new AffineTransform(
+				1, -1, 0, scale_v, 0, 0);
 
 		// get coordinates for all corners to determine real image size
+		/*
+		 * Point2D[] ptSrc = new Point2D[4];
+		 * ptSrc[0] = new Point(0, 0);
+		 * ptSrc[1] = new Point(w, 0);
+		 * ptSrc[2] = new Point(w, h);
+		 * ptSrc[3] = new Point(0, h);
+		 * 
+		 * Point2D[] ptTgt = new Point2D[4];
+		 * tf.transform(ptSrc, 0, ptTgt, 0, ptSrc.length);
+		 * 
+		 * Rectangle rc = new Rectangle(0, 0, w, h);
+		 * 
+		 * for (Point2D p : ptTgt) {
+		 * if (p.getX() < rc.x) {
+		 * rc.width += rc.x - p.getX();
+		 * rc.x = (int) p.getX();
+		 * }
+		 * if (p.getY() < rc.y) {
+		 * rc.height += rc.y - p.getY();
+		 * rc.y = (int) p.getY();
+		 * }
+		 * if (p.getX() > rc.x + rc.width)
+		 * rc.width = (int) (p.getX() - rc.x);
+		 * if (p.getY() > rc.y + rc.height)
+		 * rc.height = (int) (p.getY() - rc.y);
+		 * }
+		 * 
+		 * // BufferedImage imgTgt = config.createCompatibleImage(rc.width, rc.height,
+		 * // Transparency.TRANSLUCENT);
+		 * BufferedImage imgTgt = new BufferedImage(rc.width, rc.height,
+		 * BufferedImage.TYPE_INT_ARGB);
+		 * Graphics2D g2d = imgTgt.createGraphics();
+		 */
+
 		Point2D[] ptSrc = new Point2D[4];
-		ptSrc[0] = new Point(0, 0);
-		ptSrc[1] = new Point(w, 0);
-		ptSrc[2] = new Point(w, h);
-		ptSrc[3] = new Point(0, h);
+		ptSrc[0] = new Point(0, 0);// top left
+		ptSrc[1] = new Point(w, 0);// top right
+		ptSrc[2] = new Point(w, h);// bottom right
+		ptSrc[3] = new Point(0, h);// bottom left
 
 		Point2D[] ptTgt = new Point2D[4];
 		tf.transform(ptSrc, 0, ptTgt, 0, ptSrc.length);
 
-		Rectangle rc = new Rectangle(0, 0, w, h);
+		// int w1 = (int) (-ptTgt[0].getX() + ptTgt[1].getX());
+		BufferedImage imgout = new BufferedImage(w, 2 * h, BufferedImage.TYPE_INT_ARGB);
+		// ufferedImage imgout = new BufferedImage(w, (int)(2*h),
+		// BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d = imgout.createGraphics();
 
-		for (Point2D p : ptTgt) {
-			if (p.getX() < rc.x) {
-				rc.width += rc.x - p.getX();
-				rc.x = (int) p.getX();
-			}
-			if (p.getY() < rc.y) {
-				rc.height += rc.y - p.getY();
-				rc.y = (int) p.getY();
-			}
-			if (p.getX() > rc.x + rc.width)
-				rc.width = (int) (p.getX() - rc.x);
-			if (p.getY() > rc.y + rc.height)
-				rc.height = (int) (p.getY() - rc.y);
-		}
-
-		// BufferedImage imgTgt = config.createCompatibleImage(rc.width, rc.height,
-		// Transparency.TRANSLUCENT);
-		BufferedImage imgTgt = new BufferedImage(rc.width, rc.height, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g2d = imgTgt.createGraphics();
-
-		// create a NEW rotation transformation around new center
 		g2d.transform(tf);
-		g2d.drawImage(img, -rc.x, -rc.y, null);
+		g2d.drawImage(img, (int) (ptTgt[0].getX()), (int) (ptTgt[0].getY() - ptTgt[1].getY()), null);
 		g2d.dispose();
 
 		// drawOffset.x += rc.x;
 		// drawOffset.y += rc.y;
 
-		return imgTgt;
+		return imgout;
+	}
+
+	BufferedImage shearImage(BufferedImage img1, int width, int height, double angle, double scale) {
+		BufferedImage img = toBufferedImage(img1.getScaledInstance(width, height, 0));
+		// BufferedImage img = toBufferedImage(img2.getScaledInstance(100, 100, 0));
+		int w = img.getWidth();
+		int h = img.getHeight();
+
+		AffineTransform tf = new AffineTransform(
+				1, -Math.tan(angle), 0, scale, 0, 0);
+//-Math.tan(angle) - h / w + 1
+		// get coordinates for all corners to determine real image size
+		/*
+		 * Point2D[] ptSrc = new Point2D[4];
+		 * ptSrc[0] = new Point(0, 0);
+		 * ptSrc[1] = new Point(w, 0);
+		 * ptSrc[2] = new Point(w, h);
+		 * ptSrc[3] = new Point(0, h);
+		 * 
+		 * Point2D[] ptTgt = new Point2D[4];
+		 * tf.transform(ptSrc, 0, ptTgt, 0, ptSrc.length);
+		 * 
+		 * Rectangle rc = new Rectangle(0, 0, w, h);
+		 * 
+		 * for (Point2D p : ptTgt) {
+		 * if (p.getX() < rc.x) {
+		 * rc.width += rc.x - p.getX();
+		 * rc.x = (int) p.getX();
+		 * }
+		 * if (p.getY() < rc.y) {
+		 * rc.height += rc.y - p.getY();
+		 * rc.y = (int) p.getY();
+		 * }
+		 * if (p.getX() > rc.x + rc.width)
+		 * rc.width = (int) (p.getX() - rc.x);
+		 * if (p.getY() > rc.y + rc.height)
+		 * rc.height = (int) (p.getY() - rc.y);
+		 * }
+		 * 
+		 * // BufferedImage imgTgt = config.createCompatibleImage(rc.width, rc.height,
+		 * // Transparency.TRANSLUCENT);
+		 * BufferedImage imgTgt = new BufferedImage(rc.width, rc.height,
+		 * BufferedImage.TYPE_INT_ARGB);
+		 * Graphics2D g2d = imgTgt.createGraphics();
+		 */
+
+		Point2D[] ptSrc = new Point2D[4];
+		ptSrc[0] = new Point(0, 0);// top left
+		ptSrc[1] = new Point(w, 0);// top right
+		ptSrc[2] = new Point(w, h);// bottom right
+		ptSrc[3] = new Point(0, h);// bottom left
+
+		Point2D[] ptTgt = new Point2D[4];
+		tf.transform(ptSrc, 0, ptTgt, 0, ptSrc.length);
+
+		// for (int i = 0; i < 4; i++) {
+		// 	Point2D p = ptTgt[i];
+		// 	g.drawString(String.format("[%d](%f,%f)", i, p.getX(), p.getY()), 20,
+		// 			g.getFontMetrics().getAscent() * (i + 1) + 30);
+		// }
+
+		// int w1 = (int) (-ptTgt[0].getX() + ptTgt[1].getX());
+		int h1 = (int) (Math.abs(h - ptTgt[2].getY()) + h);
+		int w1 = (int) (ptTgt[1].getX() - ptTgt[0].getX());
+		BufferedImage imgout = new BufferedImage(w1, h1, BufferedImage.TYPE_INT_ARGB);
+		// ufferedImage imgout = new BufferedImage(w, (int)(2*h),
+		// BufferedImage.TYPE_INT_ARGB);
+		Graphics2D g2d1 = imgout.createGraphics();
+
+		g2d1.transform(tf);
+		int dy = 0;
+		if (angle < 0)
+			dy = (int) (h - ptTgt[2].getY() + ptTgt[1].getY());
+		else if (angle >= 0) {
+			dy = (int) (h - ptTgt[2].getY());
+		}
+		g2d1.drawImage(img, 0, dy, null);
+		g2d1.dispose();
+		return imgout;
 	}
 
 	Image processTile(BufferedImage img) {
@@ -394,15 +544,12 @@ public class Application extends JFrame {
 
 	WallObject processWall(BufferedImage front, BufferedImage back) {
 		double f = viewing_angle;
+		double scaling = 1;
 		WallObject wobj = new WallObject();
-		BufferedImage img1 = shearImage(front, f);
-		wobj.bleft = img1.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img2 = shearImage(front, -f);
-		wobj.bright = img2.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img3 = shearImage(back, -f);
-		wobj.tleft = img3.getScaledInstance((int)(gridsize / 2), (int) (gridsize / 2), 0);
-		BufferedImage img4 = shearImage(back, f);
-		wobj.tright = img4.getScaledInstance((int) (gridsize / 2), (int) (gridsize / 2), 0);
+		wobj.bleft = shearImage(front, gridsize, gridsize, f, scaling);
+		wobj.bright = shearImage(front,  gridsize, gridsize,-f, scaling);
+		wobj.tleft = shearImage(back, gridsize, gridsize, -f, scaling);
+		wobj.tright = shearImage(back, gridsize, gridsize, f, scaling);
 		return wobj;
 	}
 
@@ -410,7 +557,7 @@ public class Application extends JFrame {
 		grass = processTile(ImageFile("assets/grass.jpeg"));
 		sand = processTile(ImageFile("assets/sand.jpeg"));
 		wood_wall = processWall(ImageFile("assets/stone.jpeg"), ImageFile("assets/wood.jpeg"));
-		debug_texture = ImageFile("assets/wood.jpeg");
+		debug_texture = ImageFile("assets/debug_grad.jpeg");
 	}
 
 	public void InitializeApplication() {
@@ -456,8 +603,8 @@ public class Application extends JFrame {
 }
 
 class WallObject {
-	public Image bleft;
-	public Image bright;
-	public Image tleft;
-	public Image tright;
+	public BufferedImage bleft;
+	public BufferedImage bright;
+	public BufferedImage tleft;
+	public BufferedImage tright;
 }
