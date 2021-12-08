@@ -1,12 +1,17 @@
 package game;
 
 import java.awt.event.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import javax.swing.event.MouseInputListener;
 
-public class Peripherals implements KeyListener {
+
+public class Peripherals implements KeyListener, MouseInputListener, MouseWheelListener {
     public Map<Integer, Boolean> keyboard = new HashMap<Integer, Boolean>();
+    Map<Integer, ScrollEvent> scroll_hook = new HashMap<Integer, ScrollEvent>();
 
     public boolean keyPressed(char c){
         int code = java.awt.event.KeyEvent.getExtendedKeyCodeForChar(c);
@@ -19,6 +24,20 @@ public class Peripherals implements KeyListener {
         if(keyboard.get(c)==null)
             return false;
         return keyboard.get(c);
+    }
+
+    public int addScrollHook(ScrollEvent e){
+        int i;
+        for(i = 0;i<100;i++){
+            if(scroll_hook.get(i)==null)
+                break;
+        }
+        scroll_hook.put(i, e);
+        return i;
+    }
+
+    public void removeScrollHook(int i){
+        scroll_hook.remove(i);
     }
 
     @Override
@@ -36,6 +55,58 @@ public class Peripherals implements KeyListener {
     public void keyReleased(KeyEvent e) {
         int c =e.getKeyCode();
         keyboard.put(c, false);
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void mouseDragged(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void mouseMoved(MouseEvent e) {
+        // TODO Auto-generated method stub
+        
+    }
+
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e) {
+        e.consume();
+        double val = e.getPreciseWheelRotation();
+        for(ScrollEvent ev : scroll_hook.values()){
+            ev.action(val);
+        }
+        
     }
     
 }

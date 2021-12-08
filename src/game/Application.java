@@ -4,7 +4,6 @@ import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-import game.AssetManager;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -14,7 +13,6 @@ import java.awt.image.BufferedImage;
 import java.awt.Image;
 import java.io.File;
 import java.io.IOException;
-import java.nio.Buffer;
 import java.awt.Rectangle;
 import java.awt.Point;
 import java.awt.geom.Point2D;
@@ -22,11 +20,6 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.event.KeyEvent;
-import java.awt.BasicStroke;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.awt.Font;
@@ -94,33 +87,32 @@ public class Application extends JFrame {
 	float movement_base_speed = 0.04f;
 	float sprint_mult = 2f;
 
-	int gridsize = 120;
+	int gridsize = 60;
+	int tile_buffer = 3;
 	float player_x = 0;
 	float player_y = 0;
 
-	double viewing_angle = Math.PI / 6;
+	//double viewing_angle = Math.PI / 6;
 
 	void paint_(Graphics g, int WIDTH, int HEIGHT) {
 		Graphics2D g2d = (Graphics2D) g;
 
-		viewing_angle = dynamic_params[0];
-		gridsize = (int)dynamic_params[1];
-		double v_mult = Math.sin(viewing_angle);
-
+		double v_mult = 0.5;
 		g.setColor(Color.WHITE);
 		g.fillRect(0, 0, (int) WIDTH, (int) HEIGHT);
 
 		// GRID LINES
-		int COL_N;
-		int ROW_N;
+		int COL_N =  (int)(WIDTH/gridsize+3);
+		int ROW_N = (int)(HEIGHT/gridsize/v_mult*2)+4;
 		float tile_offset_x = player_x % 1;
 		float tile_offset_y = player_y % 1;
-		for (int x = -1; x <= (COL_N = WIDTH/gridsize+2); x += 1) {
-			for (int y = -1; y <= (ROW_N = (int)(HEIGHT/gridsize/v_mult*2)+2); y += 1) {
+		
+		for (int x = 0; x <= COL_N; x += 1) {
+			for (int y = 0; y <= ROW_N; y += 1) {
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2);
-				int dx = (int) ((x - tile_offset_x) * gridsize + offset_p);
+				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2)-gridsize;
+				int dx = (int) ((x - tile_offset_x) * gridsize + offset_p)-gridsize;
 
 				int nx = (int) x + (int) player_x;
 				int ny = (int) y + 2 * (int) (player_y);
@@ -128,9 +120,9 @@ public class Application extends JFrame {
 				if (nx >= 0 && nx < LEVEL_W && ny >= 0 && ny < LEVEL_H) {
 					Tile tile = level[nx][ny];
 					if (tile != null && tile.floor != -1) {
-						g2d.drawImage(AMGR.getFlat(tile.floor).src, dx, dy, new Color(0, 0, 0, 0), null);
+						g2d.drawImage(AMGR.getFlat(tile.floor).src, dx, dy, gridsize+tile_buffer, (int)(gridsize*v_mult)+tile_buffer, new Color(0, 0, 0, 0), null);
 					} else {
-						g2d.drawImage(AMGR.getFlat("grass").src, dx, dy, new Color(0, 0, 0, 0), null);
+						g2d.drawImage(AMGR.getFlat("grass").src, dx, dy, gridsize+tile_buffer, (int)(gridsize*v_mult)+tile_buffer, new Color(0, 0, 0, 0), null);
 					}
 				}
 
@@ -146,8 +138,8 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = -1; x <= (COL_N = WIDTH/gridsize+2); x += 1) {
-			for (int y = -1; y <= (ROW_N = (int)(HEIGHT/gridsize/v_mult*2)+2); y += 1) {
+		for (int x = 0; false && x <= COL_N; x += 1) {
+			for (int y = 0; y <= ROW_N; y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
@@ -196,13 +188,13 @@ public class Application extends JFrame {
 			}
 		}
 
-		for (int x = -1; false && x <= (COL_N = WIDTH/gridsize+2); x += 1) {
-			for (int y = -1; y <= (ROW_N = (int)(HEIGHT/gridsize/v_mult*2)+2); y += 1) {
+		for (int x = 0; x <= COL_N; x += 1) {
+			for (int y = 0; y <= ROW_N; y += 1) {
 				// ---------
 				int offset = y % 2;
 				int offset_p = (int) (offset * gridsize / 2);
-				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2);
-				int dx = (int) ((x - tile_offset_x) * gridsize) + offset_p;
+				int dy = (int) ((y - 2 * tile_offset_y) * gridsize * v_mult / 2)-gridsize;
+				int dx = (int) ((x - tile_offset_x) * gridsize + offset_p)-gridsize;
 				int nx = (int) x + (int) player_x;
 				int ny = (int) y + 2 * (int) (player_y);
 
@@ -231,7 +223,7 @@ public class Application extends JFrame {
 		}
 
 		// g.drawImage(grass, 300, 300, new Color(0, 0, 0, 0), null);
-		g.dispose();
+		//g.dispose();
 	}
 
 	boolean pressing_switch = false;
@@ -460,15 +452,18 @@ public class Application extends JFrame {
 	}
 
 	Flat processFlat(BufferedImage img) {
+		final double f = Math.PI/6;
+		final int size = 512;
+
 		BufferedImage img1 = rotateImage(img, Math.PI / 4);
 		return new Flat(
-				toBufferedImage(img1.getScaledInstance(gridsize+3, (int) (gridsize * Math.sin(viewing_angle)+3), 0)));
+				toBufferedImage(img1.getScaledInstance(size, (int) (size * Math.sin(f)), 0)));
 	}
 
 	Wall processWall(BufferedImage front, BufferedImage back) {
-		double f = viewing_angle;
+		double f = Math.PI/6;
 		double scaling = 1;
-		int size = gridsize / 2;
+		int size = 512;
 		ShearReturn bottomright = shearImage(front, size, size, f, scaling);
 		ShearReturn bottomleft = shearImage(front, size, size, -f, scaling);
 		ShearReturn topright = shearImage(back, size, size, -f, scaling);
@@ -495,6 +490,16 @@ public class Application extends JFrame {
 		AMGR.addAsset("stone", processWall(ImageFile("assets/stone.jpeg"), ImageFile("assets/stone.jpeg")));
 	}
 
+	public void addEventHooks(){
+		PERI.addScrollHook(new ScrollEvent(){
+
+			@Override
+			public void action(double val) {
+				gridsize+=val;
+			}
+
+		});
+	}
 	public void InitializeApplication() {
 		add(panel);
 
@@ -508,8 +513,12 @@ public class Application extends JFrame {
 		PERI = new Peripherals();
 		AMGR = new AssetManager();
 		this.addKeyListener(PERI);
+		this.addMouseListener(PERI);
+		this.addMouseWheelListener(PERI);
 
 		ImportAssets();
+
+		addEventHooks();
 
 		//level[10][10] = new Tile(AMGR, "sand");
 		level[3][3] = new Tile(AMGR, "sand", "sand", "wood", "wood", "stone", "stone");
@@ -522,7 +531,7 @@ public class Application extends JFrame {
 		//this.dispose();
 		// Event Timers (screen refresh/game time)
 		Timer timer = new Timer();
-		// initScreenRefresh();
+		initScreenRefresh();
 		// game timer
 		timer.schedule(new TimerTask() {
 
@@ -533,14 +542,14 @@ public class Application extends JFrame {
 
 		}, 0, TICK_RATE);
 
-		timer.schedule(new TimerTask() {
+		// timer.schedule(new TimerTask() {
 
-			@Override
-			public void run() {
-				panel.repaint();
-			}
+		// 	@Override
+		// 	public void run() {
+		// 		panel.repaint();
+		// 	}
 
-		}, 0, (int) (1000 / FPS));
+		// }, 0, (int) (1000 / FPS));
 
 		setTitle("Application");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
